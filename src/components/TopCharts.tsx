@@ -6,10 +6,11 @@ import { setActiveSong, handlePlayPause } from "../redux/slices/playerSlice";
 import { Track } from "../types/Track";
 import { FaPlayCircle, FaPauseCircle } from "react-icons/fa";
 import { useDispatch } from "react-redux";
-import { STATES, fetchSongs } from "../redux/slices/songsSlice";
 import { Loader } from "./Loader";
-import { FC, useEffect } from "react";
+import { FC } from "react";
 import { Error } from "./Error";
+import { fetchSongs } from "../pages/Discover";
+import { useQuery } from "@tanstack/react-query";
 
 const TopSongs: FC<{
   song: Track;
@@ -101,15 +102,19 @@ const TopSongs: FC<{
 };
 
 export const TopCharts = () => {
-  const { songs, status } = useSelector((state: RootState) => state.songs);
-  const topSongs: Track[] = songs.slice(0, 5);
-  const dispatch = useDispatch();
+  const {
+    isLoading,
+    error,
+    data: songs,
+  } = useQuery({
+    queryKey: ["songs"],
+    queryFn: fetchSongs,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    dispatch(fetchSongs() as any);
-  }, []);
+  const topSongs: Track[] = songs?.tracks?.slice(0, 5) || [];
 
-  if (status == STATES.ERROR) {
+  if (error) {
     return <Error errorMessage="Songs not found or some error occured" />;
   }
 
@@ -128,21 +133,25 @@ export const TopCharts = () => {
         Top charts
       </Heading>
 
-      {status === STATES.LOADING ? (
+      {isLoading ? (
         <Loader message="Loading top songs" />
       ) : (
         <>
-          <Flex direction="column" minH="6%">
-            {topSongs.map((song: Track, i: number) => {
-              return (
-                <TopSongs
-                  song={song}
-                  key={song.key}
-                  index={i}
-                  songs={topSongs}
-                />
-              );
-            })}
+          <Flex direction="column" minH="46%">
+            {topSongs.length > 0 ? (
+              topSongs.map((song: Track, i: number) => {
+                return (
+                  <TopSongs
+                    song={song}
+                    key={song.key}
+                    index={i}
+                    songs={topSongs}
+                  />
+                );
+              })
+            ) : (
+              <Text color="#fff">Songs not found</Text>
+            )}
           </Flex>
 
           <Heading fontSize="25px" color="#fff">
@@ -162,22 +171,28 @@ export const TopCharts = () => {
               },
             }}
           >
-            {topSongs.map((song: Track) => {
-              return (
-                <Link
-                  to={song.artists ? `/artists/${song.artists[0].adamid}` : "/"}
-                  key={song.key}
-                >
-                  <Avatar
-                    src={song.share?.image}
-                    size={"xl"}
-                    m="10px"
+            {topSongs.length > 0 ? (
+              topSongs.map((song: Track) => {
+                return (
+                  <Link
+                    to={
+                      song.artists ? `/artists/${song.artists[0].adamid}` : "/"
+                    }
                     key={song.key}
-                    cursor="pointer"
-                  />
-                </Link>
-              );
-            })}
+                  >
+                    <Avatar
+                      src={song.share?.image}
+                      size={"xl"}
+                      m="10px"
+                      key={song.key}
+                      cursor="pointer"
+                    />
+                  </Link>
+                );
+              })
+            ) : (
+              <Text color="#fff">Artists not found</Text>
+            )}
           </Flex>
         </>
       )}

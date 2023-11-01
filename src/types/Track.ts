@@ -1,4 +1,4 @@
-export interface RootObject {
+export interface AllTracksRes {
     properties: Properties;
     tracks:     Track[];
    }

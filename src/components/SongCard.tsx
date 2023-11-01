@@ -15,6 +15,8 @@ import { RootState } from "../redux/store.ts";
 import { setActiveSong, handlePlayPause } from "../redux/slices/playerSlice";
 import { BsHeartFill } from "react-icons/bs";
 import { useEffect, useState } from "react";
+import { fetchSongs } from "../pages/Discover.tsx";
+import { useQuery } from "@tanstack/react-query";
 
 export const SongCard: React.FC<{
   song: Track;
@@ -26,7 +28,14 @@ export const SongCard: React.FC<{
   const { isPlaying, activeSong } = useSelector(
     (state: RootState) => state.player
   );
-  const { songs } = useSelector((state: RootState) => state.songs);
+
+  const { data: allSongs } = useQuery({
+    queryKey: ["songs"],
+    queryFn: fetchSongs,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const songs = allSongs?.tracks;
   const [isFavourite, setIsFavourite] = useState<boolean>(false);
 
   useEffect(() => {

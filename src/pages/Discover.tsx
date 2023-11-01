@@ -1,23 +1,43 @@
-import { Box, Heading } from "@chakra-ui/react";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "../redux/store.ts";
-import { fetchSongs, STATES } from "../redux/slices/songsSlice.ts";
-import { FC, useEffect } from "react";
+import { Box, Heading, Text } from "@chakra-ui/react";
+import { FC } from "react";
 import { Loader } from "../components/Loader.tsx";
 import { SongCard } from "../components/SongCard.tsx";
-import { Track } from "../types/Track.ts";
+import { Track, AllTracksRes } from "../types/Track.ts";
 import { SearchBar } from "../components/SearchBar.tsx";
 import { Error } from "../components/Error.tsx";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
+
+export const fetchSongs = async (): Promise<AllTracksRes> => {
+  const res = await axios({
+    url: "https://shazam.p.rapidapi.com/charts/track",
+    headers: {
+      "X-RapidAPI-Host": "shazam.p.rapidapi.com",
+      "X-RapidAPI-Key": import.meta.env.VITE_API_KEY,
+    },
+    params: {
+      locale: "en-US",
+      pageSize: "24",
+      startFrom: "20",
+    },
+    method: "GET",
+  });
+
+  return res.data as AllTracksRes;
+};
 
 export const Discover: FC = () => {
-  const { songs, status } = useSelector((state: RootState) => state.songs);
-  const dispatch = useDispatch();
+  const {
+    isLoading,
+    error,
+    data: songs,
+  } = useQuery({
+    queryKey: ["songs"],
+    queryFn: fetchSongs,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    dispatch(fetchSongs() as any);
-  }, []);
-
-  if (status == STATES.ERROR) {
+  if (error) {
     return (
       <Error
         errorMessage={"Opps!! Something went wrong while loading songs for you"}
@@ -45,7 +65,7 @@ export const Discover: FC = () => {
         </Heading>
       </Box>
 
-      {status == STATES.LOADING ? (
+      {isLoading ? (
         <Loader message="Loading songs" />
       ) : (
         <Box
@@ -59,9 +79,13 @@ export const Discover: FC = () => {
             md: "normal",
           }}
         >
-          {songs.map((song: Track, i: number) => {
-            return <SongCard key={song.key} song={song} i={i} />;
-          })}
+          {songs != undefined && songs?.tracks ? (
+            songs.tracks.map((song: Track, i: number) => {
+              return <SongCard key={song.key} song={song} i={i} />;
+            })
+          ) : (
+            <Text color="#fff">Songs not found</Text>
+          )}
         </Box>
       )}
     </Box>

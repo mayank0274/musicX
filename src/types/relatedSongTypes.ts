@@ -1,4 +1,4 @@
-export interface RootObject {
+export interface RELATEDSONGSTYPE {
   data: RELATEDSONGS[];
 }
 

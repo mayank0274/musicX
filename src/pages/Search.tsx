@@ -6,46 +6,43 @@ import { Loader } from "../components/Loader";
 import { Error } from "../components/Error";
 import { Track } from "../types/Track";
 import { SongCard } from "../components/SongCard";
+import { useQuery } from "@tanstack/react-query";
 
 export const Search: FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [isError, setIsError] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [song, setSong] = useState<Track>({});
-
-  const fetchSong = async (): Promise<void> => {
+  const fetchSong = async (): Promise<Track | null> => {
     const url = `https://shazam.p.rapidapi.com/search/?term=${searchParams.get(
       "query"
     )}`;
 
-    setIsLoading(true);
-    try {
-      const res = await axios({
-        url,
-        headers: {
-          "X-RapidAPI-Host": "shazam.p.rapidapi.com",
-          "X-RapidAPI-Key": import.meta.env.VITE_API_KEY,
-        },
-        method: "GET",
-      });
+    const res = await axios({
+      url,
+      headers: {
+        "X-RapidAPI-Host": "shazam.p.rapidapi.com",
+        "X-RapidAPI-Key": import.meta.env.VITE_API_KEY,
+      },
+      method: "GET",
+    });
 
-      if (res.data.tracks) {
-        setSong(res.data.tracks.hits[0].track);
-      }
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-      console.log(error);
-      setIsError(true);
+    if (res.data.tracks) {
+      return res.data?.tracks?.hits[0]?.track;
+    } else {
+      return null;
     }
   };
 
-  useEffect(() => {
-    fetchSong();
-  }, []);
+  const {
+    isLoading,
+    error,
+    data: song,
+  } = useQuery({
+    queryKey: ["songs", searchParams.get("query")],
+    queryFn: fetchSong,
+    staleTime: 60 * 1000,
+  });
 
-  if (isError) {
+  if (error) {
     return (
       <Error
         errorMessage={"Opps!! Something went wrong while loading song details"}
@@ -95,7 +92,7 @@ export const Search: FC = () => {
           md: "normal",
         }}
       >
-        {song.key ? (
+        {song != null ? (
           <SongCard key={song?.key} song={song} i={1} songsData={[song]} />
         ) : (
           <Text color={"#fff"} p={"8px"}>
